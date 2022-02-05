@@ -36,7 +36,12 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 # import torchvision.models as models
 import torchvision.models as models_baseline # networks with zero padding
-import models as models_partial # partial conv based padding 
+import models as models_partial # partial conv based padding
+import albumentations as A
+from utils.custom_augs import InverseContrast
+from utils.visualize_augs import visualize_augmentations
+import matplotlib.pyplot as plt
+from utils.dataset import AlbumentationsDataset
 
 
 model_baseline_names = sorted(name for name in models_baseline.__dict__
@@ -213,14 +218,27 @@ def main():
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
-    train_dataset = datasets.ImageFolder(
-        traindir,
-        transforms.Compose([
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ]))
+    albu_transforms = A.Compose([A.Resize(512, 512),
+                   A.HorizontalFlip(p=0.5),
+                   A.Rotate([-10, 10], p=0.6),
+                   A.RandomGamma(gamma_limit=(80, 120), p=0.3),
+                   InverseContrast(p=0.3),
+                   A.GaussianBlur(blur_limit=(3, 7), sigma_limit=0, always_apply=False, p=0.5),
+                   A.Equalize(mode='cv', by_channels=True, mask=None, mask_params=(), always_apply=False, p=0.5),
+                   A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                   A.ToFloat(max_value=255.0)])
+
+
+    # train_dataset = datasets.ImageFolder(
+    #     root=traindir,
+    #     transform=transforms.Compose([
+    #         transforms.RandomResizedCrop(224),
+    #         transforms.RandomHorizontalFlip(),
+    #         transforms.ToTensor(),
+    #         normalize]))
+
+    file_paths = [os.path.join(traindir, os.listdir(traindir)[i]) for i in range(len(traindir))]
+    train_dataset = AlbumentationsDataset(file_paths, albu_transforms)
 
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -230,6 +248,9 @@ def main():
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+
+    visualize_augmentations(train_dataset, albu_transforms)
+
 
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose([
