@@ -11,6 +11,9 @@ class AlbumentationsDataset(Dataset):
         self.file_paths = file_paths
         self.labels = labels
         self.transform = transform
+        classes, class_to_idx = self.find_classes(self.root)
+        self.classes = classes
+        self.class_to_idx = class_to_idx
 
     def __len__(self):
         return len(self.file_paths)
@@ -29,3 +32,32 @@ class AlbumentationsDataset(Dataset):
             # Convert numpy array to PIL Image
             image = Image.fromarray(augmented['image'])
         return image, label
+    
+    def find_classes(self, directory: str) -> Tuple[List[str], Dict[str, int]]:
+        """Find the class folders in a dataset structured as follows::
+
+            directory/
+            ├── class_x
+            │   ├── xxx.ext
+            │   ├── xxy.ext
+            │   └── ...
+            │       └── xxz.ext
+            └── class_y
+                ├── 123.ext
+                ├── nsdf3.ext
+                └── ...
+                └── asd932_.ext
+
+        This method can be overridden to only consider
+        a subset of classes, or to adapt to a different dataset directory structure.
+
+        Args:
+            directory(str): Root directory path, corresponding to ``self.root``
+
+        Raises:
+            FileNotFoundError: If ``dir`` has no class folders.
+
+        Returns:
+            (Tuple[List[str], Dict[str, int]]): List of all classes and dictionary mapping each class to an index.
+        """
+        return find_classes(directory)
