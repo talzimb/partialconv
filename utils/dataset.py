@@ -16,18 +16,23 @@ class AlbumentationsDataset(Dataset):
         return len(self.file_paths)
 
     def __getitem__(self, idx):
-        label = self.labels_frame.iloc[idx, 1]
+        # label from data frame - positive / negative
+        # label = self.labels_frame.iloc[idx, 1]
+        class_to_idx = {'negative': 0, "positive": 1}
+        label = class_to_idx[self.labels_frame.iloc[idx, 1]]
+
         file_path = self.file_paths[idx]
 
         image = Image.open(file_path)
 
         if self.transform:
             # Convert PIL image to numpy array
-            image_np = np.array(image).astype(np.uint8)
+            image_np = np.uint8(np.array(image.convert('L')).astype(np.uint8))
             # Apply transformations
             augmented = self.transform(image=image_np)
             # Convert numpy array to PIL Image
-            image = Image.fromarray(augmented['image'])
+            # image = Image.fromarray(augmented['image'])
+            image = augmented['image']
         return image, label
     #
     # def find_classes(self, directory: str) -> Tuple[List[str], Dict[str, int]]:

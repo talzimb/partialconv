@@ -1,6 +1,8 @@
 import copy
 import matplotlib.pyplot as plt
 import albumentations as A
+from PIL import Image
+
 
 def visualize_augmentations(dataset, transform, idx=0, samples=10, cols=5):
     dataset = copy.deepcopy(dataset)
@@ -14,3 +16,8 @@ def visualize_augmentations(dataset, transform, idx=0, samples=10, cols=5):
         ax.ravel()[i].set_axis_off()
     plt.tight_layout()
     plt.show()
+
+
+def dataset_loop(dataset):
+    for i, data in enumerate(dataset):
+        file = data

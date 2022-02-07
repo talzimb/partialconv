@@ -39,7 +39,7 @@ import torchvision.models as models_baseline # networks with zero padding
 import models as models_partial # partial conv based padding
 import albumentations as A
 from utils.custom_augs import InverseContrast
-from utils.visualize_augs import visualize_augmentations
+from utils.visualize_augs import visualize_augmentations, dataset_loop
 import matplotlib.pyplot as plt
 from utils.dataset import AlbumentationsDataset
 from utils.data_frame_helper import read_df
@@ -230,14 +230,16 @@ def main():
                    A.RandomGamma(gamma_limit=(80, 120), p=0.3),
                    InverseContrast(p=0.3),
                    A.GaussianBlur(blur_limit=(3, 7), sigma_limit=0, always_apply=False, p=0.5),
-                   A.Equalize(mode='cv', by_channels=True, mask=None, mask_params=(), always_apply=False, p=0.5),
-                   A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                   # A.Equalize(mode='cv', by_channels=True, mask=None, mask_params=(), always_apply=False, p=0.5),
+                   A.Normalize(mean=[0.485], std=[0.229]),
                    A.ToFloat(max_value=255.0)])
 
     train_file_paths = [os.path.join(traindir, os.listdir(traindir)[i]) for i in range(len(traindir))]
     val_file_paths = [os.path.join(valdir, os.listdir(valdir)[i]) for i in range(len(valdir))]
     train_dataset = AlbumentationsDataset(train_file_paths, train_df, albu_transforms)
     val_dataset = AlbumentationsDataset(val_file_paths, val_df, albu_transforms)
+
+    # dataset_loop(train_dataset)
 
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -312,7 +314,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     model.train()
 
     end = time.time()
-    for i, (input, target) in enumerate(train_loader):
+    for i, (input, target) in enumerate(train_loader, 0):
         # measure data loading time
         data_time.update(time.time() - end)
 
