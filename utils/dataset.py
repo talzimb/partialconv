@@ -7,19 +7,16 @@ import numpy as np
 class AlbumentationsDataset(Dataset):
     """__init__ and __len__ functions are the same as in TorchvisionDataset"""
 
-    def __init__(self, file_paths, labels, transform=None):
+    def __init__(self, file_paths, dataframe, transform=None):
         self.file_paths = file_paths
-        self.labels = labels
+        self.labels_frame = dataframe
         self.transform = transform
-        classes, class_to_idx = self.find_classes(self.root)
-        self.classes = classes
-        self.class_to_idx = class_to_idx
 
     def __len__(self):
         return len(self.file_paths)
 
     def __getitem__(self, idx):
-        label = self.labels[idx]
+        label = self.labels_frame.iloc[idx, 1]
         file_path = self.file_paths[idx]
 
         image = Image.open(file_path)
@@ -32,32 +29,32 @@ class AlbumentationsDataset(Dataset):
             # Convert numpy array to PIL Image
             image = Image.fromarray(augmented['image'])
         return image, label
-    
-    def find_classes(self, directory: str) -> Tuple[List[str], Dict[str, int]]:
-        """Find the class folders in a dataset structured as follows::
-
-            directory/
-            ├── class_x
-            │   ├── xxx.ext
-            │   ├── xxy.ext
-            │   └── ...
-            │       └── xxz.ext
-            └── class_y
-                ├── 123.ext
-                ├── nsdf3.ext
-                └── ...
-                └── asd932_.ext
-
-        This method can be overridden to only consider
-        a subset of classes, or to adapt to a different dataset directory structure.
-
-        Args:
-            directory(str): Root directory path, corresponding to ``self.root``
-
-        Raises:
-            FileNotFoundError: If ``dir`` has no class folders.
-
-        Returns:
-            (Tuple[List[str], Dict[str, int]]): List of all classes and dictionary mapping each class to an index.
-        """
-        return find_classes(directory)
+    #
+    # def find_classes(self, directory: str) -> Tuple[List[str], Dict[str, int]]:
+    #     """Find the class folders in a dataset structured as follows::
+    #
+    #         directory/
+    #         ├── class_x
+    #         │   ├── xxx.ext
+    #         │   ├── xxy.ext
+    #         │   └── ...
+    #         │       └── xxz.ext
+    #         └── class_y
+    #             ├── 123.ext
+    #             ├── nsdf3.ext
+    #             └── ...
+    #             └── asd932_.ext
+    #
+    #     This method can be overridden to only consider
+    #     a subset of classes, or to adapt to a different dataset directory structure.
+    #
+    #     Args:
+    #         directory(str): Root directory path, corresponding to ``self.root``
+    #
+    #     Raises:
+    #         FileNotFoundError: If ``dir`` has no class folders.
+    #
+    #     Returns:
+    #         (Tuple[List[str], Dict[str, int]]): List of all classes and dictionary mapping each class to an index.
+    #     """
+    #     return find_classes(directory)

@@ -42,6 +42,7 @@ from utils.custom_augs import InverseContrast
 from utils.visualize_augs import visualize_augmentations
 import matplotlib.pyplot as plt
 from utils.dataset import AlbumentationsDataset
+from utils.data_frame_helper import read_df
 
 
 model_baseline_names = sorted(name for name in models_baseline.__dict__
@@ -210,11 +211,16 @@ def main():
 
     cudnn.benchmark = True
 
-    # Data loading code
-    # traindir = os.path.join(args.data, 'train')
-    # valdir = os.path.join(args.data, 'val')
+
+    # txt file to data frame
     traindir = args.data_train #os.path.join(args.data, 'train')
     valdir = args.data_val  #os.path.join(args.data, 'val')
+    root = os.path.split(os.path.normpath(traindir))[0]
+    train_df = read_df(root, 'train.txt')
+    val_df = read_df(root, 'test.txt')
+
+    # Data loading code
+
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
@@ -228,17 +234,10 @@ def main():
                    A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                    A.ToFloat(max_value=255.0)])
 
-
-    # train_dataset = datasets.ImageFolder(
-    #     root=traindir,
-    #     transform=transforms.Compose([
-    #         transforms.RandomResizedCrop(224),
-    #         transforms.RandomHorizontalFlip(),
-    #         transforms.ToTensor(),
-    #         normalize]))
-
-    file_paths = [os.path.join(traindir, os.listdir(traindir)[i]) for i in range(len(traindir))]
-    train_dataset = AlbumentationsDataset(file_paths, albu_transforms)
+    train_file_paths = [os.path.join(traindir, os.listdir(traindir)[i]) for i in range(len(traindir))]
+    val_file_paths = [os.path.join(valdir, os.listdir(valdir)[i]) for i in range(len(valdir))]
+    train_dataset = AlbumentationsDataset(train_file_paths, train_df, albu_transforms)
+    val_dataset = AlbumentationsDataset(val_file_paths, val_df, albu_transforms)
 
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -249,17 +248,10 @@ def main():
         train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
 
-    visualize_augmentations(train_dataset, albu_transforms)
+    # visualize_augmentations(train_dataset, albu_transforms)
 
 
-    val_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(valdir, transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize,
-        ])),
-        batch_size=args.batch_size, shuffle=False,
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
     # logging
