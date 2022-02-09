@@ -209,7 +209,7 @@ def main():
             print("=> no checkpoint found at '{}'".format(args.resume))
             assert False
 
-    cudnn.benchmark = True
+    cudnn.benchmark = False
 
 
     # txt file to data frame
@@ -323,6 +323,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
         target = target.cuda(args.gpu, non_blocking=True)
 
         # compute output
+        if len(input.shape) == 3:
+            input = input.unsqueeze(1)
         output = model(input)
         loss = criterion(output, target)
 
