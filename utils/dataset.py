@@ -27,7 +27,7 @@ class AlbumentationsDataset(Dataset):
 
         if self.transform:
             # Convert PIL image to numpy array
-            image_np = np.uint8(np.array(image.convert('L')).astype(np.uint8))
+            image_np = np.uint8(np.array(image.convert('RGB')).astype(np.uint8))
             # Apply transformations
             augmented = self.transform(image=image_np)
             # Convert numpy array to PIL Image

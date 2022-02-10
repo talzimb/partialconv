@@ -247,13 +247,13 @@ def main():
         train_sampler = None
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+        train_dataset, batch_size=args.batch_size, shuffle=True,
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
 
     # visualize_augmentations(train_dataset, albu_transforms)
 
 
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True,
         num_workers=args.workers, pin_memory=True)
 
     # logging
@@ -325,14 +325,16 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # compute output
         if len(input.shape) == 3:
             input = input.unsqueeze(1)
+
+        input = input.permute(0, 3, 1, 2)
         output = model(input)
         loss = criterion(output, target)
 
         # measure accuracy and record loss
-        prec1, prec5 = accuracy(output, target, topk=(1, 5))
+        # prec1, prec5 = accuracy(output, target, topk=(1, 2))
         losses.update(loss.item(), input.size(0))
-        top1.update(prec1[0], input.size(0))
-        top5.update(prec5[0], input.size(0))
+        # top1.update(prec1[0], input.size(0))
+        # top5.update(prec5[0], input.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -381,14 +383,15 @@ def validate(val_loader, model, criterion):
             target = target.cuda(args.gpu, non_blocking=True)
 
             # compute output
+            input = input.permute(0, 3, 1, 2)
             output = model(input)
             loss = criterion(output, target)
 
             # measure accuracy and record loss
-            prec1, prec5 = accuracy(output, target, topk=(1, 5))
+            # prec1, prec5 = accuracy(output, target, topk=(1, 5))
             losses.update(loss.item(), input.size(0))
-            top1.update(prec1[0], input.size(0))
-            top5.update(prec5[0], input.size(0))
+            # top1.update(prec1[0], input.size(0))
+            # top5.update(prec5[0], input.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
