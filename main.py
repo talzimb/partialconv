@@ -43,6 +43,9 @@ from utils.visualize_augs import visualize_augmentations, dataset_loop
 import matplotlib.pyplot as plt
 from utils.dataset import AlbumentationsDataset
 from utils.data_frame_helper import read_df
+from torch.utils.tensorboard import SummaryWriter
+
+writer = SummaryWriter()
 
 
 model_baseline_names = sorted(name for name in models_baseline.__dict__
@@ -83,7 +86,7 @@ parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
 # use the batch size 256 or 192 depending on the memeory
 parser.add_argument('-b', '--batch-size', default=192, type=int,
                     metavar='N', help='mini-batch size (default: 192)')
-parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
+parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
@@ -290,7 +293,7 @@ def main():
             'state_dict': model.state_dict(),
             'best_prec1': best_prec1,
             'optimizer' : optimizer.state_dict(),
-        }, is_best, foldername=checkpoint_dir, filename='checkpoint.pth.tar')
+        }, is_best, foldername=checkpoint_dir, filename='checkpoint.pth')
 
 
         if epoch >= 94:
@@ -315,6 +318,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
     end = time.time()
     for i, (input, target) in enumerate(train_loader, 0):
+        # Clear gradients
+        optimizer.zero_grad()
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -329,6 +334,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         input = input.permute(0, 3, 1, 2)
         output = model(input)
         loss = criterion(output, target)
+        writer.add_scalar("Loss/train", loss, epoch)
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output, target, topk=(1, 2))
@@ -337,7 +343,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # top5.update(prec5[0], input.size(0))
 
         # compute gradient and do SGD step
-        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
