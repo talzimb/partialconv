@@ -37,8 +37,7 @@ import torchvision.datasets as datasets
 # import torchvision.models as models
 import torchvision.models as models_baseline # networks with zero padding
 import models as models_partial # partial conv based padding
-import albumentations as A
-from utils.custom_augs import InverseContrast
+from utils.data_transform import data_transforms
 from utils.visualize_augs import visualize_augmentations, dataset_loop
 import matplotlib.pyplot as plt
 from utils.dataset import AlbumentationsDataset
@@ -224,25 +223,16 @@ def main():
 
     # Data loading code
 
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-
-    albu_transforms = A.Compose([A.Resize(512, 512),
-                   A.HorizontalFlip(p=0.5),
-                   A.Rotate([-10, 10], p=0.6),
-                   A.RandomGamma(gamma_limit=(80, 120), p=0.3),
-                   InverseContrast(p=0.3),
-                   A.GaussianBlur(blur_limit=(3, 7), sigma_limit=0, always_apply=False, p=0.5),
-                   # A.Equalize(mode='cv', by_channels=True, mask=None, mask_params=(), always_apply=False, p=0.5),
-                   A.Normalize(mean=[0.485], std=[0.229]),
-                   A.ToFloat(max_value=255.0)])
-
     train_file_paths = [os.path.join(traindir, os.listdir(traindir)[i]) for i in range(len(traindir))]
+    train_masks = traindir + '_masks'
+    # train_masks_paths = [os.path.join(train_masks, os.listdir(traindir)[i].split('.')[0] + '_mask.' + os.listdir(traindir)[i].split('.')[1]) for i in range(len(train_masks))]
     val_file_paths = [os.path.join(valdir, os.listdir(valdir)[i]) for i in range(len(valdir))]
-    train_dataset = AlbumentationsDataset(train_file_paths, train_df, albu_transforms)
-    val_dataset = AlbumentationsDataset(val_file_paths, val_df, albu_transforms)
+    val_masks = valdir + '_masks'
+    val_masks_path = [os.path.join(val_masks, os.listdir(valdir)[i].split('.')[0] + '_mask.' + os.listdir(valdir)[i].split('.')[1]) for i in range(len(val_masks))]
+    # train_dataset = AlbumentationsDataset(train_file_paths, train_df, transform=data_transforms('TRAIN'))
+    val_dataset = AlbumentationsDataset(val_file_paths, val_masks_path, val_df, transform=data_transforms('VAL'))
 
-    # dataset_loop(train_dataset)
+    # visualize_augmentations(val_dataset, val_dataset.transform)
 
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
