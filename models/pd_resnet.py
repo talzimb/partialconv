@@ -115,7 +115,7 @@ class Bottleneck(nn.Module):
 
 class PDResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000):
+    def __init__(self, block, layers, num_classes=2):
         self.inplanes = 64
         super(PDResNet, self).__init__()
         self.conv1 = PartialConv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -154,9 +154,9 @@ class PDResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, mask):
 
-        x = self.conv1(x)
+        x = self.conv1(x, mask_in=mask)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)

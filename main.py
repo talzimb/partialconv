@@ -223,13 +223,13 @@ def main():
 
     # Data loading code
 
-    train_file_paths = [os.path.join(traindir, os.listdir(traindir)[i]) for i in range(len(traindir))]
+    train_file_paths = [os.path.join(traindir, os.listdir(traindir)[i]) for i in range(len(os.listdir(traindir)))]
     train_masks = traindir + '_masks'
-    # train_masks_paths = [os.path.join(train_masks, os.listdir(traindir)[i].split('.')[0] + '_mask.' + os.listdir(traindir)[i].split('.')[1]) for i in range(len(train_masks))]
-    val_file_paths = [os.path.join(valdir, os.listdir(valdir)[i]) for i in range(len(valdir))]
+    train_masks_paths = [os.path.join(train_masks, os.listdir(traindir)[i].split('.')[0] + '_mask.' + os.listdir(traindir)[i].split('.')[1]) for i in range(len(os.listdir(traindir)))]
+    val_file_paths = [os.path.join(valdir, os.listdir(valdir)[i]) for i in range(len(os.listdir(valdir)))]
     val_masks = valdir + '_masks'
-    val_masks_path = [os.path.join(val_masks, os.listdir(valdir)[i].split('.')[0] + '_mask.' + os.listdir(valdir)[i].split('.')[1]) for i in range(len(val_masks))]
-    # train_dataset = AlbumentationsDataset(train_file_paths, train_df, transform=data_transforms('TRAIN'))
+    val_masks_path = [os.path.join(val_masks, os.listdir(valdir)[i].split('.')[0] + '_mask.' + os.listdir(valdir)[i].split('.')[1]) for i in range(len(os.listdir(val_masks)))]
+    train_dataset = AlbumentationsDataset(train_file_paths, train_masks_paths, train_df, transform=data_transforms('TRAIN'))
     val_dataset = AlbumentationsDataset(val_file_paths, val_masks_path, val_df, transform=data_transforms('VAL'))
 
     # visualize_augmentations(val_dataset, val_dataset.transform)
@@ -307,7 +307,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     model.train()
 
     end = time.time()
-    for i, (input, target) in enumerate(train_loader, 0):
+    for i, (input, target, mask) in enumerate(train_loader, 0):
         # Clear gradients
         optimizer.zero_grad()
         # measure data loading time
@@ -322,7 +322,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
             input = input.unsqueeze(1)
 
         input = input.permute(0, 3, 1, 2)
-        output = model(input)
+        output = model(input, mask)
+        # output = model(input, mask)
         loss = criterion(output, target)
         writer.add_scalar("Loss/train", loss, epoch)
 
@@ -372,14 +373,14 @@ def validate(val_loader, model, criterion):
 
     with torch.no_grad():
         end = time.time()
-        for i, (input, target) in enumerate(val_loader):
+        for i, (input, target, mask) in enumerate(val_loader):
             if args.gpu is not None:
                 input = input.cuda(args.gpu, non_blocking=True)
             target = target.cuda(args.gpu, non_blocking=True)
 
             # compute output
             input = input.permute(0, 3, 1, 2)
-            output = model(input)
+            output = model(input, mask)
             loss = criterion(output, target)
 
             # measure accuracy and record loss
