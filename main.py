@@ -275,13 +275,13 @@ def main():
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
         best_prec1 = max(prec1, best_prec1)
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'arch': args.arch,
-            'state_dict': model.state_dict(),
-            'best_prec1': best_prec1,
-            'optimizer' : optimizer.state_dict(),
-        }, is_best, foldername=checkpoint_dir, filename='checkpoint.pth')
+        # save_checkpoint({
+        #     'epoch': epoch + 1,
+        #     'arch': args.arch,
+        #     'state_dict': model.state_dict(),
+        #     'best_prec1': best_prec1,
+        #     'optimizer' : optimizer.state_dict(),
+        # }, is_best, foldername=checkpoint_dir, filename='checkpoint.pth')
 
 
         if epoch >= 0:
@@ -291,7 +291,7 @@ def main():
                 'state_dict': model.state_dict(),
                 'best_prec1': best_prec1,
                 'optimizer' : optimizer.state_dict(),
-            }, False, foldername=checkpoint_dir, filename='epoch_'+str(epoch)+'_checkpoint.pth.tar')
+            }, False, foldername=checkpoint_dir, filename='epoch_'+str(epoch)+'_checkpoint.pth')
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -422,7 +422,9 @@ def validate(val_loader, model, criterion):
     return top1.avg
 
 
-def save_checkpoint(state, is_best, foldername='', filename='checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, foldername = '', filename='checkpoint.pth'):
+    if not os.path.exists(foldername):
+        os.makedirs(foldername)
     torch.save(state, os.path.join(foldername, filename))
     if is_best:
         shutil.copyfile(os.path.join(foldername, filename), os.path.join(foldername, 'model_best.pth.tar'))
