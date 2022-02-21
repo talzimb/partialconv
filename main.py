@@ -219,6 +219,7 @@ def main():
     traindir = args.data_train #os.path.join(args.data, 'train')
     valdir = args.data_val  #os.path.join(args.data, 'val')
     root = os.path.split(os.path.normpath(traindir))[0]
+    checkpoint_dir = os.path.join(root, checkpoint_dir)
     train_image_mask = pd.read_csv(os.path.join(traindir, 'paths.txt'), sep=' ', header=None)
     train_image_mask.columns = ['train_image', 'train_mask', 'train_cls']
     test_image_mask = pd.read_csv(os.path.join(valdir, 'paths.txt'), sep=' ', header=None)
@@ -283,7 +284,7 @@ def main():
         }, is_best, foldername=checkpoint_dir, filename='checkpoint.pth')
 
 
-        if epoch >= 94:
+        if epoch >= 0:
             save_checkpoint({
                 'epoch': epoch + 1,
                 'arch': args.arch,
