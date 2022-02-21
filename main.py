@@ -320,8 +320,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         input = input.permute(0, 3, 1, 2)
         mask = mask.unsqueeze(1).type(torch.float)
-        b, c, h, w = mask.shape
-        mask = mask.expand(b, 3, h, w)
+        # b, c, h, w = mask.shape
+        # mask = mask.expand(b, 3, h, w)
         output = model(input, mask)
         # output = model(input, mask)
         loss = criterion(output, target)
