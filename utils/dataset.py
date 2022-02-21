@@ -20,7 +20,7 @@ class AlbumentationsDataset(Dataset):
         # label from data frame - positive / negative
         # label = self.labels_frame.iloc[idx, 1]
         class_to_idx = {'negative': 0, "positive": 1}
-        label = class_to_idx[self.labels_frame.iloc[idx, 1]]
+        label = class_to_idx[self.labels_frame.iloc[idx]]
 
         file_path = self.file_paths[idx]
 

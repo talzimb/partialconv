@@ -24,6 +24,7 @@ import shutil
 import time
 import warnings
 
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.parallel
@@ -218,19 +219,15 @@ def main():
     traindir = args.data_train #os.path.join(args.data, 'train')
     valdir = args.data_val  #os.path.join(args.data, 'val')
     root = os.path.split(os.path.normpath(traindir))[0]
-    train_df = read_df(root, 'train.txt')
-    val_df = read_df(root, 'test.txt')
+    train_image_mask = pd.read_csv(os.path.join(traindir, 'paths.txt'), sep=' ', header=None)
+    train_image_mask.columns = ['train_image', 'train_mask', 'train_cls']
+    test_image_mask = pd.read_csv(os.path.join(valdir, 'paths.txt'), sep=' ', header=None)
+    test_image_mask.columns = ['test_image', 'test_mask', 'test_cls']
+
 
     # Data loading code
-
-    train_file_paths = [os.path.join(traindir, os.listdir(traindir)[i]) for i in range(len(os.listdir(traindir)))]
-    train_masks = traindir + '_masks'
-    train_masks_paths = [os.path.join(train_masks, os.listdir(traindir)[i].split('.')[0] + '_mask.' + os.listdir(traindir)[i].split('.')[1]) for i in range(len(os.listdir(traindir)))]
-    val_file_paths = [os.path.join(valdir, os.listdir(valdir)[i]) for i in range(len(os.listdir(valdir)))]
-    val_masks = valdir + '_masks'
-    val_masks_path = [os.path.join(val_masks, os.listdir(valdir)[i].split('.')[0] + '_mask.' + os.listdir(valdir)[i].split('.')[1]) for i in range(len(os.listdir(val_masks)))]
-    train_dataset = AlbumentationsDataset(train_file_paths, train_masks_paths, train_df, transform=data_transforms('TRAIN'))
-    val_dataset = AlbumentationsDataset(val_file_paths, val_masks_path, val_df, transform=data_transforms('VAL'))
+    train_dataset = AlbumentationsDataset(train_image_mask['train_image'], train_image_mask['train_mask'], train_image_mask['train_cls'], transform=data_transforms('TRAIN'))
+    val_dataset = AlbumentationsDataset(test_image_mask['test_image'], test_image_mask['test_mask'], test_image_mask['test_cls'], transform=data_transforms('VAL'))
 
     # visualize_augmentations(val_dataset, val_dataset.transform)
 
@@ -322,6 +319,9 @@ def train(train_loader, model, criterion, optimizer, epoch):
             input = input.unsqueeze(1)
 
         input = input.permute(0, 3, 1, 2)
+        mask = mask.unsqueeze(1).type(torch.float)
+        b, c, h, w = mask.shape
+        mask = mask.expand(b, 3, h, w)
         output = model(input, mask)
         # output = model(input, mask)
         loss = criterion(output, target)
