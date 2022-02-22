@@ -17,7 +17,7 @@ def inference(val_loader, model, criterion, args):
 
     with torch.no_grad():
         end = time.time()
-        for i, (input, target, mask) in enumerate(val_loader):
+        for i, (input, target, mask, file_names) in enumerate(val_loader):
             torch.cuda.empty_cache()
             if args.gpu is not None:
                 input = input.cuda(args.gpu, non_blocking=True)
@@ -39,8 +39,8 @@ def inference(val_loader, model, criterion, args):
             confidence_scores = (output.max(axis=1).values.detach().cpu().numpy() + overlap_scores) / 2
 
             save_images(heatmap_images,
-                        [f"{osp.basename(str(j))}_{prediction_strings[j]}_{confidence_scores[j]:.4g}.jpg" \
-                         for j in range(len(input))],
+                        [f"{osp.basename(file_names[j])}_{prediction_strings[j]}_{confidence_scores[j]:.4g}.jpg" \
+                         for j in range(len(file_names))],
                         osp.join(args.ckptdirprefix, "inference_results", "gc_out"))
             all_confidence_scores.extend(confidence_scores)
             all_prediction_strings.extend(prediction_strings)
