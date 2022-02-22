@@ -44,7 +44,7 @@ import matplotlib.pyplot as plt
 from utils.dataset import AlbumentationsDataset
 from utils.data_frame_helper import read_df
 from torch.utils.tensorboard import SummaryWriter
-
+from infer import inference
 writer = SummaryWriter()
 
 
@@ -253,13 +253,14 @@ def main():
 
 
     if args.evaluate:
-        validate(val_loader, model, criterion)
+        inference(val_loader, model, criterion, args)
         return
 
 
     # logging
     with open(args.logger_fname, "a") as log_file:
         log_file.write('started training\n')
+
 
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:

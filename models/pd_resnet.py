@@ -207,7 +207,7 @@ def pdresnet50(pretrained=False, **kwargs):
     model = PDResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
         # TODO find a place for pretrained models
-        PATH = '/nih-elda-var/Studies_under_Helsinki_approval/Rambam_Bone_Tumor_study_Dr_Eyal_Berkovish/covid_partialconv/pretrained_checkpoints/pdresnet50.pth'
+        PATH = 'smb://isi.bigdata.weizmann.ac.il/projects/yonina/SAMPL_training/covid_partialconv/pretrained_checkpoints/pdresnet50.pth'
         # PATH = os.path.join(os.getcwd(), 'pretrained_checkpoints/pdresnet50.pth')
         checkpoint = torch.load(PATH)
         # model.load_state_dict(model_zoo.load_url(model_urls['pdresnet50']))
