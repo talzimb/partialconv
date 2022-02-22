@@ -75,7 +75,7 @@ parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet50',
                         ' (default: resnet50)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=100, type=int, metavar='N',
+parser.add_argument('--epochs', default=3, type=int, metavar='N',
                     help='number of total epochs to run')
 # parser.add_argument('--epochs', default=90, type=int, metavar='N',
 #                     help='number of total epochs to run')
@@ -161,6 +161,12 @@ def main():
             model = models_baseline.__dict__[args.arch](pretrained=True)
         else:
             model = models_partial.__dict__[args.arch](pretrained=True)
+        # load checkpoint weights if path is given
+        if args.chkpnt_path is not None:
+            print("=> loading chekpoint '{}'".format(args.chkpnt_path))
+            checkpoint = torch.load(args.chkpnt_path)
+            state_dict = {k.replace("module.", ""): v for k, v in checkpoint['state_dict'].items()}
+            model.load_state_dict(state_dict)
         # model = models.__dict__[args.arch](pretrained=True)
     else:
         print("=> creating model '{}'".format(args.arch))

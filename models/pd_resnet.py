@@ -207,12 +207,19 @@ def pdresnet50(pretrained=False, **kwargs):
     model = PDResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
         # TODO find a place for pretrained models
-        PATH = 'smb://isi.bigdata.weizmann.ac.il/projects/yonina/SAMPL_training/covid_partialconv/pretrained_checkpoints/pdresnet50.pth'
+        PATH = '/home/eligol/Documents/01_WIS/partial_conv/partialconv/experiment_1/checkpoint_pdresnet50_multigpu_b16/pdresnet50.pth'
         # PATH = os.path.join(os.getcwd(), 'pretrained_checkpoints/pdresnet50.pth')
+
+        model_dict = model.state_dict()
         checkpoint = torch.load(PATH)
         # model.load_state_dict(model_zoo.load_url(model_urls['pdresnet50']))
-        state_dict = {k.replace("module.", ""): v for k, v in checkpoint['state_dict'].items()}
-        model.load_state_dict(state_dict)
+        checkpoint_dict = {k.replace("module.", ""): v for k, v in checkpoint['state_dict'].items()}
+
+        # remove class output layers because their different shape and update weights from checkpoint
+        del checkpoint_dict['fc.weight']
+        del checkpoint_dict['fc.bias']
+        model_dict.update(checkpoint_dict)
+        model.load_state_dict(model_dict)
     return model
 
 
