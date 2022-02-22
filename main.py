@@ -110,6 +110,8 @@ parser.add_argument('--seed', default=None, type=int,
                     help='seed for initializing training. ')
 parser.add_argument('--gpu', default=None, type=int,
                     help='GPU id to use.')
+parser.add_argument('--chkpnt_path', default=None, type=str,
+                    help='path to checkpoint if pretrained is True')
 
 parser.add_argument('--prefix', default='', type=str)
 parser.add_argument('--ckptdirprefix', default='', type=str)
@@ -306,7 +308,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     model.train()
 
     end = time.time()
-    for i, (input, target, mask) in enumerate(train_loader, 0):
+    for i, (input, target, mask, img_names) in enumerate(train_loader, 0):
         # Clear gradients
         optimizer.zero_grad()
         # measure data loading time
@@ -375,7 +377,7 @@ def validate(val_loader, model, criterion):
 
     with torch.no_grad():
         end = time.time()
-        for i, (input, target, mask) in enumerate(val_loader):
+        for i, (input, target, mask, img_names) in enumerate(val_loader):
             if args.gpu is not None:
                 input = input.cuda(args.gpu, non_blocking=True)
             target = target.cuda(args.gpu, non_blocking=True)
