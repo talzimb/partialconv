@@ -39,7 +39,7 @@ class AlbumentationsDataset(Dataset):
             # image = Image.fromarray(augmented['image'])
             image = augmented['image']
             mask = augmented['mask']
-        return image, label, mask, img_name
+        return image, label, mask, file_path
     #
     # def find_classes(self, directory: str) -> Tuple[List[str], Dict[str, int]]:
     #     """Find the class folders in a dataset structured as follows::

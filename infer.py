@@ -33,7 +33,7 @@ def inference(val_loader, model, criterion, args):
 
             # Generate and save the GracCAM visualization maps
             prediction_strings = get_prediction_strings(output, target)
-            heatmap_images, overlap_scores = visualizer.get_heatmap_projection()
+            heatmap_images, overlap_scores = visualizer.get_heatmap_projection(file_names)
 
             # Generate confidence scores
             confidence_scores = (output.max(axis=1).values.detach().cpu().numpy() + overlap_scores) / 2
