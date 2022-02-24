@@ -1,9 +1,9 @@
 import os.path as osp
 import torch
 import time
-# from main import AverageMeter
 from grad_cam.grad_cam import GradCAM
 from grad_cam.utils import get_prediction_strings, save_images
+from utils.tsne_analysis import tsne
 
 
 def inference(val_loader, model, criterion, args):
@@ -14,6 +14,9 @@ def inference(val_loader, model, criterion, args):
     visualizer = GradCAM(model=model)
     all_confidence_scores, all_prediction_strings = [], []
 
+    last_layers = []
+    targets = []
+    predictions = []
 
     with torch.no_grad():
         end = time.time()
@@ -26,10 +29,15 @@ def inference(val_loader, model, criterion, args):
             # compute output
             with torch.enable_grad():
                 input = input.permute(0, 3, 1, 2)
-                output = model(input, mask)
+                output, last_fc = model(input, mask)
                 # loss = criterion(output, target)
                 loss = torch.gather(output, dim=1, index=target.unsqueeze(-1)).sum()
                 loss.backward(retain_graph=True)
+
+            # collect last layesr for tsne
+            last_layers.append(last_fc)
+            targets.append(target)
+            predictions.append(torch.argmax(output, dim=1))
 
             # Generate and save the GracCAM visualization maps
             prediction_strings = get_prediction_strings(output, target)
@@ -44,6 +52,13 @@ def inference(val_loader, model, criterion, args):
                         osp.join(args.ckptdirprefix, "inference_results", "gc_out"))
             all_confidence_scores.extend(confidence_scores)
             all_prediction_strings.extend(prediction_strings)
+
+        # convert outputs to tensors
+        results = torch.cat(predictions).cpu(), torch.cat(targets).cpu()
+        last_layers = torch.cat(last_layers).cpu()
+        # create tsne analysis
+        tsne(feature_map=last_layers, results=results, component_num=2,
+             dir_path=osp.join(args.ckptdirprefix, "inference_results"))
 
         # generate_confidence_histogram(all_confidence_scores, all_prediction_strings,
         #                               osp.join(args.ckptdirprefix, "inference_results", "confidence_histogram.png"))

@@ -332,7 +332,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         mask = mask.unsqueeze(1).type(torch.float)
         # b, c, h, w = mask.shape
         # mask = mask.expand(b, 3, h, w)
-        output = model(input, mask)
+        output, fc_embeddings = model(input, mask)
         # output = model(input, mask)
         loss = criterion(output, target)
         writer.add_scalar("Loss/train", loss, epoch)
@@ -390,7 +390,7 @@ def validate(val_loader, model, criterion):
 
             # compute output
             input = input.permute(0, 3, 1, 2)
-            output = model(input, mask)
+            output, fc_embeddings = model(input, mask)
             loss = criterion(output, target)
 
             # measure accuracy and record loss
