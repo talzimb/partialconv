@@ -45,7 +45,7 @@ from utils.dataset import AlbumentationsDataset
 from utils.data_frame_helper import read_df
 from torch.utils.tensorboard import SummaryWriter
 from infer import inference
-writer = SummaryWriter()
+
 
 
 model_baseline_names = sorted(name for name in models_baseline.__dict__
@@ -122,7 +122,8 @@ best_prec1 = 0
 def main():
     global args, best_prec1
     args = parser.parse_args()
-
+    root = r'/home/projects/yonina/SAMPL_training/covid_partialconv'
+    writer = SummaryWriter(log_dir=os.path.join(root, args.ckptdirprefix, args.prefix))
     checkpoint_dir = args.ckptdirprefix + 'checkpoint_' + args.arch + '_' + args.prefix + '/'
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
@@ -235,8 +236,8 @@ def main():
 
 
     # Data loading code
-    train_dataset = AlbumentationsDataset(train_image_mask['train_image'], train_image_mask['train_mask'], train_image_mask['train_cls'], transform=data_transforms('TRAIN'))
-    val_dataset = AlbumentationsDataset(test_image_mask['test_image'], test_image_mask['test_mask'], test_image_mask['test_cls'], transform=data_transforms('VAL'))
+    train_dataset = AlbumentationsDataset(train_image_mask['train_image'], train_image_mask['train_mask'], train_image_mask['train_cls'], phase='TRAIN', transform=data_transforms('TRAIN'))
+    val_dataset = AlbumentationsDataset(test_image_mask['test_image'], test_image_mask['test_mask'], test_image_mask['test_cls'], phase='VAL', transform=data_transforms('VAL'))
 
     # visualize_augmentations(val_dataset, val_dataset.transform)
 
@@ -276,7 +277,7 @@ def main():
         adjust_learning_rate(optimizer, epoch)
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch)
+        train(train_loader, model, criterion, optimizer, epoch, writer)
 
         # evaluate on validation set
         prec1 = validate(val_loader, model, criterion)
@@ -303,7 +304,7 @@ def main():
             }, False, foldername=checkpoint_dir, filename='epoch_'+str(epoch)+'_checkpoint.pth')
 
 
-def train(train_loader, model, criterion, optimizer, epoch):
+def train(train_loader, model, criterion, optimizer, epoch, writer):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()

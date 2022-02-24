@@ -7,11 +7,12 @@ import numpy as np
 class AlbumentationsDataset(Dataset):
     """__init__ and __len__ functions are the same as in TorchvisionDataset"""
 
-    def __init__(self, file_paths, masks_paths, dataframe, transform=None):
+    def __init__(self, file_paths, masks_paths, dataframe, phase, transform=None):
         self.file_paths = file_paths # path to images
         self.masks_paths = masks_paths
         self.labels_frame = dataframe
         self.transform = transform
+        self.phase = phase
 
     def __len__(self):
         return len(self.file_paths)
@@ -28,11 +29,14 @@ class AlbumentationsDataset(Dataset):
 
         image = Image.open(file_path)
         mask = Image.open(self.masks_paths[idx])
+        mask = self.resize_mask(mask, image)
 
         if self.transform:
             # Convert PIL image to numpy array
             image_np = np.uint8(np.array(image.convert('RGB')).astype(np.uint8))
             mask_np = np.array(mask)
+            if self.phase == 'TRAIN':
+                image_np = self.equalize_img(image_np, mask_np)
             # Apply transformations
             augmented = self.transform(image=image_np, mask=mask_np)
             # Convert numpy array to PIL Image
@@ -40,32 +44,19 @@ class AlbumentationsDataset(Dataset):
             image = augmented['image']
             mask = augmented['mask']
         return image, label, mask, file_path
-    #
-    # def find_classes(self, directory: str) -> Tuple[List[str], Dict[str, int]]:
-    #     """Find the class folders in a dataset structured as follows::
-    #
-    #         directory/
-    #         ├── class_x
-    #         │   ├── xxx.ext
-    #         │   ├── xxy.ext
-    #         │   └── ...
-    #         │       └── xxz.ext
-    #         └── class_y
-    #             ├── 123.ext
-    #             ├── nsdf3.ext
-    #             └── ...
-    #             └── asd932_.ext
-    #
-    #     This method can be overridden to only consider
-    #     a subset of classes, or to adapt to a different dataset directory structure.
-    #
-    #     Args:
-    #         directory(str): Root directory path, corresponding to ``self.root``
-    #
-    #     Raises:
-    #         FileNotFoundError: If ``dir`` has no class folders.
-    #
-    #     Returns:
-    #         (Tuple[List[str], Dict[str, int]]): List of all classes and dictionary mapping each class to an index.
-    #     """
-    #     return find_classes(directory)
+
+    def resize_mask(self, mask, image):
+        im = np.array(image)
+        w, h = im.shape
+        # resize mask to image dimension
+        Re_tra = A.Compose([
+            A.Resize(width=w, height=h),
+        ])
+        re_mask = Re_tra(image=np.array(mask))['image']
+        return Image.fromarray(re_mask)
+
+    def equalize_img(self, image, mask):
+        equ_tr = A.Compose([A.Equalize(mode='pil', mask=mask, by_channels=True)])
+        eq_image = equ_tr(image=image)['image']
+
+        return eq_image

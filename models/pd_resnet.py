@@ -220,9 +220,9 @@ def pdresnet50(pretrained=False, **kwargs):
     model = PDResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
         # TODO find a place for pretrained models
-        PATH = '/home/eligol/Documents/01_WIS/partial_conv/partialconv/experiment_1/checkpoint_pdresnet50_multigpu_b16/pdresnet50.pth'
+        # PATH = '/home/eligol/Documents/01_WIS/partial_conv/partialconv/experiment_1/checkpoint_pdresnet50_multigpu_b16/pdresnet50.pth'
         # PATH = os.path.join(os.getcwd(), 'pretrained_checkpoints/pdresnet50.pth')
-
+        PATH = '/home/projects/yonina/SAMPL_training/covid_partialconv/pretrained_checkpoints/pdresnet50.pth'
         # Initialize model
         model.apply(init_classifier)
         model_dict = model.state_dict()
