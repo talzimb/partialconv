@@ -35,8 +35,8 @@ class AlbumentationsDataset(Dataset):
             # Convert PIL image to numpy array
             image_np = np.uint8(np.array(image.convert('RGB')).astype(np.uint8))
             mask_np = np.array(mask)
-            if self.phase == 'TRAIN':
-                image_np = self.equalize_img(image_np, mask_np)
+            # if self.phase == 'TRAIN':
+            #     image_np = self.equalize_img(image_np, mask_np)
             # Apply transformations
             augmented = self.transform(image=image_np, mask=mask_np)
             # Convert numpy array to PIL Image
@@ -47,7 +47,10 @@ class AlbumentationsDataset(Dataset):
 
     def resize_mask(self, mask, image):
         im = np.array(image)
-        w, h = im.shape
+        if len(im.shape) == 3:
+            c, w, h = im.shape
+        else:
+            w, h = im.shape
         # resize mask to image dimension
         Re_tra = A.Compose([
             A.Resize(width=w, height=h),
@@ -56,7 +59,7 @@ class AlbumentationsDataset(Dataset):
         return Image.fromarray(re_mask)
 
     def equalize_img(self, image, mask):
-        equ_tr = A.Compose([A.Equalize(mode='pil', mask=mask, by_channels=True)])
+        equ_tr = A.Compose([A.Equalize(mode='cv', mask=mask, by_channels=False)])
         eq_image = equ_tr(image=image)['image']
 
         return eq_image

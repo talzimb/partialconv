@@ -45,6 +45,7 @@ from utils.dataset import AlbumentationsDataset
 from utils.data_frame_helper import read_df
 from torch.utils.tensorboard import SummaryWriter
 from infer import inference
+from utils.metrics import calculate_metrics, attach_to_tensorboard
 
 
 
@@ -123,7 +124,8 @@ def main():
     global args, best_prec1
     args = parser.parse_args()
     root = r'/home/projects/yonina/SAMPL_training/covid_partialconv'
-    writer = SummaryWriter(log_dir=os.path.join(root, args.ckptdirprefix, args.prefix))
+    log_dir_saving_path = os.path.join(root, args.ckptdirprefix, args.prefix)
+    writer = SummaryWriter(log_dir=log_dir_saving_path)
     checkpoint_dir = args.ckptdirprefix + 'checkpoint_' + args.arch + '_' + args.prefix + '/'
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
@@ -280,7 +282,7 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch, writer)
 
         # evaluate on validation set
-        prec1 = validate(val_loader, model, criterion)
+        prec1 = validate(val_loader, model, criterion, writer, epoch)
 
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
@@ -301,7 +303,7 @@ def main():
                 'state_dict': model.state_dict(),
                 'best_prec1': best_prec1,
                 'optimizer' : optimizer.state_dict(),
-            }, False, foldername=checkpoint_dir, filename='epoch_'+str(epoch)+'_checkpoint.pth')
+            }, False, foldername=log_dir_saving_path, filename='epoch_'+str(epoch)+'_checkpoint.pth')
 
 
 def train(train_loader, model, criterion, optimizer, epoch, writer):
@@ -336,7 +338,9 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
         output, fc_embeddings = model(input, mask)
         # output = model(input, mask)
         loss = criterion(output, target)
+        metrics = calculate_metrics(output.to('cpu'), target.to('cpu'))
         writer.add_scalar("Loss/train", loss, epoch)
+        attach_to_tensorboard(writer, 'train', metrics, epoch)
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output, target, topk=(1, 2))
@@ -373,7 +377,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
                     data_time=data_time, loss=losses, top1=top1, top5=top5))
 
 
-def validate(val_loader, model, criterion):
+def validate(val_loader, model, criterion, writer, epoch):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -397,6 +401,9 @@ def validate(val_loader, model, criterion):
             # measure accuracy and record loss
             # prec1, prec5 = accuracy(output, target, topk=(1, 5))
             losses.update(loss.item(), input.size(0))
+            metrics = calculate_metrics(output.to('cpu'), target.to('cpu'))
+            writer.add_scalar("Loss/train", loss, epoch)
+            attach_to_tensorboard(writer, 'val', metrics, epoch)
             # top1.update(prec1[0], input.size(0))
             # top5.update(prec5[0], input.size(0))
 
