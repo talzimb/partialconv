@@ -128,7 +128,12 @@ class PDResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1,1))
-        self.fc = nn.Linear(512 * block.expansion, 2) #num classes = 2
+        # self.fc = nn.Linear(512 * block.expansion, 2) #num classes = 2
+
+        self.fc1 = nn.Linear(512 * block.expansion, 1024)
+        self.fc2 = nn.Linear(1024, 512)
+        self.fc3 = nn.Linear(512, 256)
+        self.fc4 = nn.Linear(256, 2)
 
         for m in self.modules():
             if isinstance(m, PartialConv2d):
@@ -167,11 +172,14 @@ class PDResNet(nn.Module):
         x = self.layer4(x)
 
         x = self.avgpool(x)
-        # x = x.reshape(x.size(0), -1)
-        x = torch.flatten(x, 1)
-        x = self.fc(x)
+        last_conv_layer = torch.flatten(x, 1)
+        last_layer = self.relu(self.fc3(self.relu(self.fc2(self.relu(self.fc1(last_conv_layer))))))
+        x = self.fc4(last_layer)
 
-        return x
+        # x = torch.flatten(x, 1)
+        # x = self.fc(x)
+
+        return x, last_layer
 
 
 def pdresnet18(pretrained=False, **kwargs):
@@ -204,15 +212,29 @@ def pdresnet50(pretrained=False, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
+    def init_classifier(m):
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weight)
+            nn.init.constant_(m.bias, 0.)
+
     model = PDResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
         # TODO find a place for pretrained models
-        PATH = '/nih-elda-var/Studies_under_Helsinki_approval/Rambam_Bone_Tumor_study_Dr_Eyal_Berkovish/covid_partialconv/pretrained_checkpoints/pdresnet50.pth'
+        PATH = '/home/eligol/Documents/01_WIS/partial_conv/partialconv/experiment_1/checkpoint_pdresnet50_multigpu_b16/pdresnet50.pth'
         # PATH = os.path.join(os.getcwd(), 'pretrained_checkpoints/pdresnet50.pth')
+
+        # Initialize model
+        model.apply(init_classifier)
+        model_dict = model.state_dict()
         checkpoint = torch.load(PATH)
         # model.load_state_dict(model_zoo.load_url(model_urls['pdresnet50']))
-        state_dict = {k.replace("module.", ""): v for k, v in checkpoint['state_dict'].items()}
-        model.load_state_dict(state_dict)
+        checkpoint_dict = {k.replace("module.", ""): v for k, v in checkpoint['state_dict'].items()}
+
+        # remove class output layers because their different shape and update weights from checkpoint
+        del checkpoint_dict['fc.weight']
+        del checkpoint_dict['fc.bias']
+        model_dict.update(checkpoint_dict)
+        model.load_state_dict(model_dict)
     return model
 
 

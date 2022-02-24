@@ -24,6 +24,7 @@ import shutil
 import time
 import warnings
 
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.parallel
@@ -43,7 +44,7 @@ import matplotlib.pyplot as plt
 from utils.dataset import AlbumentationsDataset
 from utils.data_frame_helper import read_df
 from torch.utils.tensorboard import SummaryWriter
-
+from infer import inference
 writer = SummaryWriter()
 
 
@@ -74,7 +75,7 @@ parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet50',
                         ' (default: resnet50)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=100, type=int, metavar='N',
+parser.add_argument('--epochs', default=3, type=int, metavar='N',
                     help='number of total epochs to run')
 # parser.add_argument('--epochs', default=90, type=int, metavar='N',
 #                     help='number of total epochs to run')
@@ -109,6 +110,8 @@ parser.add_argument('--seed', default=None, type=int,
                     help='seed for initializing training. ')
 parser.add_argument('--gpu', default=None, type=int,
                     help='GPU id to use.')
+parser.add_argument('--chkpnt_path', default=None, type=str,
+                    help='path to checkpoint if pretrained is True')
 
 parser.add_argument('--prefix', default='', type=str)
 parser.add_argument('--ckptdirprefix', default='', type=str)
@@ -158,6 +161,12 @@ def main():
             model = models_baseline.__dict__[args.arch](pretrained=True)
         else:
             model = models_partial.__dict__[args.arch](pretrained=True)
+        # load checkpoint weights if path is given
+        if args.chkpnt_path is not None:
+            print("=> loading chekpoint '{}'".format(args.chkpnt_path))
+            checkpoint = torch.load(args.chkpnt_path)
+            state_dict = {k.replace("module.", ""): v for k, v in checkpoint['state_dict'].items()}
+            model.load_state_dict(state_dict)
         # model = models.__dict__[args.arch](pretrained=True)
     else:
         print("=> creating model '{}'".format(args.arch))
@@ -218,19 +227,16 @@ def main():
     traindir = args.data_train #os.path.join(args.data, 'train')
     valdir = args.data_val  #os.path.join(args.data, 'val')
     root = os.path.split(os.path.normpath(traindir))[0]
-    train_df = read_df(root, 'train.txt')
-    val_df = read_df(root, 'test.txt')
+    checkpoint_dir = os.path.join(root, checkpoint_dir)
+    train_image_mask = pd.read_csv(os.path.join(traindir, 'paths.txt'), sep=' ', header=None)
+    train_image_mask.columns = ['train_image', 'train_mask', 'train_cls']
+    test_image_mask = pd.read_csv(os.path.join(valdir, 'paths.txt'), sep=' ', header=None)
+    test_image_mask.columns = ['test_image', 'test_mask', 'test_cls']
+
 
     # Data loading code
-
-    train_file_paths = [os.path.join(traindir, os.listdir(traindir)[i]) for i in range(len(os.listdir(traindir)))]
-    train_masks = traindir + '_masks'
-    train_masks_paths = [os.path.join(train_masks, os.listdir(traindir)[i].split('.')[0] + '_mask.' + os.listdir(traindir)[i].split('.')[1]) for i in range(len(os.listdir(traindir)))]
-    val_file_paths = [os.path.join(valdir, os.listdir(valdir)[i]) for i in range(len(os.listdir(valdir)))]
-    val_masks = valdir + '_masks'
-    val_masks_path = [os.path.join(val_masks, os.listdir(valdir)[i].split('.')[0] + '_mask.' + os.listdir(valdir)[i].split('.')[1]) for i in range(len(os.listdir(val_masks)))]
-    train_dataset = AlbumentationsDataset(train_file_paths, train_masks_paths, train_df, transform=data_transforms('TRAIN'))
-    val_dataset = AlbumentationsDataset(val_file_paths, val_masks_path, val_df, transform=data_transforms('VAL'))
+    train_dataset = AlbumentationsDataset(train_image_mask['train_image'], train_image_mask['train_mask'], train_image_mask['train_cls'], transform=data_transforms('TRAIN'))
+    val_dataset = AlbumentationsDataset(test_image_mask['test_image'], test_image_mask['test_mask'], test_image_mask['test_cls'], transform=data_transforms('VAL'))
 
     # visualize_augmentations(val_dataset, val_dataset.transform)
 
@@ -255,13 +261,14 @@ def main():
 
 
     if args.evaluate:
-        validate(val_loader, model, criterion)
+        inference(val_loader, model, criterion, args)
         return
 
 
     # logging
     with open(args.logger_fname, "a") as log_file:
         log_file.write('started training\n')
+
 
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
@@ -277,23 +284,23 @@ def main():
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
         best_prec1 = max(prec1, best_prec1)
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'arch': args.arch,
-            'state_dict': model.state_dict(),
-            'best_prec1': best_prec1,
-            'optimizer' : optimizer.state_dict(),
-        }, is_best, foldername=checkpoint_dir, filename='checkpoint.pth')
+        # save_checkpoint({
+        #     'epoch': epoch + 1,
+        #     'arch': args.arch,
+        #     'state_dict': model.state_dict(),
+        #     'best_prec1': best_prec1,
+        #     'optimizer' : optimizer.state_dict(),
+        # }, is_best, foldername=checkpoint_dir, filename='checkpoint.pth')
 
 
-        if epoch >= 94:
+        if epoch >= 0:
             save_checkpoint({
                 'epoch': epoch + 1,
                 'arch': args.arch,
                 'state_dict': model.state_dict(),
                 'best_prec1': best_prec1,
                 'optimizer' : optimizer.state_dict(),
-            }, False, foldername=checkpoint_dir, filename='epoch_'+str(epoch)+'_checkpoint.pth.tar')
+            }, False, foldername=checkpoint_dir, filename='epoch_'+str(epoch)+'_checkpoint.pth')
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -307,7 +314,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     model.train()
 
     end = time.time()
-    for i, (input, target, mask) in enumerate(train_loader, 0):
+    for i, (input, target, mask, img_names) in enumerate(train_loader, 0):
         # Clear gradients
         optimizer.zero_grad()
         # measure data loading time
@@ -322,7 +329,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
             input = input.unsqueeze(1)
 
         input = input.permute(0, 3, 1, 2)
-        output = model(input, mask)
+        mask = mask.unsqueeze(1).type(torch.float)
+        # b, c, h, w = mask.shape
+        # mask = mask.expand(b, 3, h, w)
+        output, fc_embeddings = model(input, mask)
         # output = model(input, mask)
         loss = criterion(output, target)
         writer.add_scalar("Loss/train", loss, epoch)
@@ -373,14 +383,14 @@ def validate(val_loader, model, criterion):
 
     with torch.no_grad():
         end = time.time()
-        for i, (input, target, mask) in enumerate(val_loader):
+        for i, (input, target, mask, img_names) in enumerate(val_loader):
             if args.gpu is not None:
                 input = input.cuda(args.gpu, non_blocking=True)
             target = target.cuda(args.gpu, non_blocking=True)
 
             # compute output
             input = input.permute(0, 3, 1, 2)
-            output = model(input, mask)
+            output, fc_embeddings = model(input, mask)
             loss = criterion(output, target)
 
             # measure accuracy and record loss
@@ -421,7 +431,9 @@ def validate(val_loader, model, criterion):
     return top1.avg
 
 
-def save_checkpoint(state, is_best, foldername='', filename='checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, foldername = '', filename='checkpoint.pth'):
+    if not os.path.exists(foldername):
+        os.makedirs(foldername)
     torch.save(state, os.path.join(foldername, filename))
     if is_best:
         shutil.copyfile(os.path.join(foldername, filename), os.path.join(foldername, 'model_best.pth.tar'))

@@ -20,9 +20,11 @@ class AlbumentationsDataset(Dataset):
         # label from data frame - positive / negative
         # label = self.labels_frame.iloc[idx, 1]
         class_to_idx = {'negative': 0, "positive": 1}
-        label = class_to_idx[self.labels_frame.iloc[idx, 1]]
+        label = class_to_idx[self.labels_frame.iloc[idx]]
 
         file_path = self.file_paths[idx]
+        img_name = file_path.split('/')[-1]
+        img_name = img_name[:img_name.rfind('.')]  #remove file type from image name
 
         image = Image.open(file_path)
         mask = Image.open(self.masks_paths[idx])
@@ -37,7 +39,7 @@ class AlbumentationsDataset(Dataset):
             # image = Image.fromarray(augmented['image'])
             image = augmented['image']
             mask = augmented['mask']
-        return image, label, mask
+        return image, label, mask, file_path
     #
     # def find_classes(self, directory: str) -> Tuple[List[str], Dict[str, int]]:
     #     """Find the class folders in a dataset structured as follows::

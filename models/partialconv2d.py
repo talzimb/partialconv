@@ -57,7 +57,8 @@ class PartialConv2d(nn.Conv2d):
                         mask = torch.ones(1, 1, input.data.shape[2], input.data.shape[3]).to(input)
                 else:
                     mask = mask_in
-                        
+                if len(mask.shape) == 3:
+                    mask = mask.unsqueeze(1).type(torch.float)
                 self.update_mask = F.conv2d(mask, self.weight_maskUpdater, bias=None, stride=self.stride, padding=self.padding, dilation=self.dilation, groups=1)
 
                 # for mixed precision training, change 1e-8 to 1e-6
