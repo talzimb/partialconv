@@ -189,7 +189,7 @@ def main():
         model = model.cuda(args.gpu)
     elif args.distributed:
         model.cuda()
-        model = torch.nn.parallel.DistributedDataParallel(model)
+        model = torch.nn.parallel.DataParallel(model)
     else:
         # if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
         if args.arch.startswith('alexnet') or 'vgg' in args.arch:
@@ -264,7 +264,7 @@ def main():
 
 
     if args.evaluate:
-        inference(val_loader, model, criterion, args)
+        inference(val_loader, model, criterion, args, root)
         return
 
 

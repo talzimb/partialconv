@@ -6,7 +6,7 @@ from grad_cam.utils import get_prediction_strings, save_images
 from utils.tsne_analysis import tsne
 
 
-def inference(val_loader, model, criterion, args):
+def inference(val_loader, model, criterion, args, root):
     # switch to evaluate mode
     model.eval()
 
@@ -49,7 +49,7 @@ def inference(val_loader, model, criterion, args):
             save_images(heatmap_images,
                         [f"{osp.basename(file_names[j])}_{prediction_strings[j]}_{confidence_scores[j]:.4g}.jpg" \
                          for j in range(len(file_names))],
-                        osp.join(args.ckptdirprefix, "inference_results", "gc_out"))
+                        osp.join(root, args.ckptdirprefix, "inference_results", "gc_out"))
             all_confidence_scores.extend(confidence_scores)
             all_prediction_strings.extend(prediction_strings)
 
